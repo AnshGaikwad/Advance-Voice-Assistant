@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">AdvanceVoiceAssistant</string>
+    <string name="fab_content_desc">Mic Start</string>
 </resources>
