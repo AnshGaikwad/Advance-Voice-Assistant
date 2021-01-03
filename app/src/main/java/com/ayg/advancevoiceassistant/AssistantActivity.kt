@@ -3,22 +3,22 @@ package com.ayg.advancevoiceassistant
 import android.animation.Animator
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.res.Resources
 import android.os.Build
 import android.os.Bundle
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.util.Log
 import android.util.TypedValue
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewAnimationUtils
 import android.view.ViewTreeObserver
 import android.view.ViewTreeObserver.OnGlobalLayoutListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
-import android.content.res.Resources
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.util.Log
-import android.view.MotionEvent
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.*
 
@@ -116,22 +116,39 @@ class AssistantActivity : AppCompatActivity() {
                     Log.d(logkeeper, keeper)
                 }
             }
+
             override fun onPartialResults(bundle: Bundle) {}
             override fun onEvent(i: Int, bundle: Bundle) {}
+
         })
 
 //         on touch for fab
-        floatingActionButton.setOnTouchListener(View.OnTouchListener { view, motionEvent ->
-            if (motionEvent.action == MotionEvent.ACTION_UP) {
-                speechRecognizer.stopListening()
-                Log.d(logsr, "released")
+
+        floatingActionButton.setOnTouchListener { view, motionEvent ->
+            when (motionEvent.action) {
+                MotionEvent.ACTION_UP -> {
+                    speechRecognizer.stopListening()
+                    Log.d("SR", "released")
+                }
+                MotionEvent.ACTION_DOWN -> {
+                    speechRecognizer.startListening(recognizerIntent)
+                    Log.d("SR", "pressed")
+                }
             }
-            if (motionEvent.action == MotionEvent.ACTION_DOWN) {
-                speechRecognizer.startListening(recognizerIntent)
-                Log.d(logsr, "pressed")
-            }
-            true
-        })
+            false
+        }
+
+
+        // check if speech recognition available
+        if(SpeechRecognizer.isRecognitionAvailable(this))
+        {
+            Log.d(logsr, "yes")
+        }
+        else
+        {
+            Log.d(logsr,"false")
+        }
+
     }
 
     // speaking text through text to speech
@@ -170,8 +187,10 @@ class AssistantActivity : AppCompatActivity() {
             val cy: Int = background.getBottom() - getDips(44)
             val finalRadius: Int = Math.max(background.getWidth(), background.getHeight())
             val circularReveal =
-                ViewAnimationUtils.createCircularReveal(background, cx, cy,
-                    finalRadius.toFloat(), 0f)
+                ViewAnimationUtils.createCircularReveal(
+                    background, cx, cy,
+                    finalRadius.toFloat(), 0f
+                )
             circularReveal.addListener(object : Animator.AnimatorListener {
                 override fun onAnimationStart(animator: Animator) {}
                 override fun onAnimationEnd(animator: Animator) {
@@ -194,6 +213,7 @@ class AssistantActivity : AppCompatActivity() {
         // destroying
         textToSpeech.stop()
         textToSpeech.shutdown()
+        speechRecognizer.cancel()
         speechRecognizer.destroy()
         Log.i(logsr, "destroy")
         Log.i(logtts, "destroy")
