@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">AdvanceVoiceAssistant</string>
     <string name="fab_content_desc">Mic Start</string>
+    <string name="first_message">Hello, how can I help you?</string>
+    <string name="second_message">Can you tell me something?</string>
 </resources>
