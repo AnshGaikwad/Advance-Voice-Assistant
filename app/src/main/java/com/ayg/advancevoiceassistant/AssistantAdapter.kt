@@ -21,14 +21,8 @@ class AssistantAdapter : RecyclerView.Adapter<AssistantAdapter.ViewHolder>(){
     override fun onBindViewHolder(holder: ViewHolder, position: Int)
     {
         val item = data[position]
-        if(item.type == 0)
-        {
-            holder.assistantMessage.text = item.message
-        }
-        else
-        {
-            holder.humanMessage.text = item.message
-        }
+        holder.assistantMessage.text = item.assistant_message
+        holder.humanMessage.text = item.human_message
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {

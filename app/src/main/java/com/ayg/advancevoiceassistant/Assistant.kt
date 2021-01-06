@@ -10,11 +10,11 @@ data class Assistant(
     @PrimaryKey(autoGenerate = true)
     var assistantId: Long = 0L,
 
-    @ColumnInfo(name = "assistant_messages")
-    var message: String = "DEFAULT_MESSAGE",
+    @ColumnInfo(name = "assistant_message")
+    var assistant_message: String = "DEFAULT_MESSAGE",
 
-    @ColumnInfo(name = "type_of_message")
-    var type: Int = -1,
+    @ColumnInfo(name = "human_message")
+    var human_message: String = "DEFAULT_MESSAGE"
 ) {
 
 }

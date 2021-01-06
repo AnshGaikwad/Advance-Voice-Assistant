@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
+import com.ayg.advancevoiceassistant.AssistantActivity
 import kotlinx.coroutines.*
 
 class AssistantViewModel (
@@ -24,12 +25,9 @@ class AssistantViewModel (
 
     val messages = database.getAllMessages()
 
-//    private val messageString = Transformations.map(messages){messages ->
-//        formatMessages(messages, application.resources)
-//    }
-
     init{
         initializeCurrentMessage()
+
     }
 
     private fun initializeCurrentMessage()
@@ -42,7 +40,7 @@ class AssistantViewModel (
     private suspend fun getCurrentMessageFromDatabase(): Assistant? {
         return withContext(Dispatchers.IO){
             var message = database.getCurrentMessage()
-            if(message?.message == "DEFAULT_MESSAGE")
+            if(message?.assistant_message == "DEFAULT_MESSAGE" || message?.human_message == "DEFAULT_MESSAGE" )
             {
                 message = null
             }
@@ -50,12 +48,12 @@ class AssistantViewModel (
         }
     }
 
-    fun sendMessageToDatabase(message: String, type: Int){
+    fun sendMessageToDatabase(assistantMessage: String, humanMessage: String){
         uiScope.launch {
-            val newMessage = Assistant()
-            newMessage.message = message
-            newMessage.type = type
-            insert(newMessage)
+            val newAssistant = Assistant()
+            newAssistant.assistant_message = assistantMessage
+            newAssistant.human_message = humanMessage
+            insert(newAssistant)
             currentMessage.value = getCurrentMessageFromDatabase()
         }
     }

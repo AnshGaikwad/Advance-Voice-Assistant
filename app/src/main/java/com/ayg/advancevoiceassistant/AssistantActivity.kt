@@ -116,8 +116,6 @@ class AssistantActivity : AppCompatActivity() {
             }
         }
 
-        speak("Hello, how can I help you?")
-
         // Initializing speech recognizer
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -141,7 +139,6 @@ class AssistantActivity : AppCompatActivity() {
                 val data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 if (data != null) {
                     keeper = data[0]
-                    assistantViewModel.sendMessageToDatabase(keeper, 0)
                     Log.d(logkeeper, keeper)
                     when {
                         keeper.contains("clear everything") -> assistantViewModel.onClear()
@@ -184,8 +181,7 @@ class AssistantActivity : AppCompatActivity() {
 
         })
 
-//         on touch for fab
-
+//      on touch for fab
         binding.assistantFloatingActionButton.setOnTouchListener { view, motionEvent ->
             when (motionEvent.action) {
                 MotionEvent.ACTION_UP -> {
@@ -221,7 +217,7 @@ class AssistantActivity : AppCompatActivity() {
     private fun speak(text: String)
     {
         textToSpeech.speak(text, TextToSpeech.QUEUE_FLUSH, null, "")
-        assistantViewModel.sendMessageToDatabase(text, 1)
+        assistantViewModel.sendMessageToDatabase(keeper, text)
     }
 
     private fun getTime()
