@@ -44,9 +44,19 @@ import androidx.core.content.ContextCompat
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import bot.box.horology.annotation.DURATION
+import bot.box.horology.annotation.SUNSIGN
+import bot.box.horology.api.Horoscope
+import bot.box.horology.delegate.Response
+import bot.box.horology.hanshake.HorologyController
+import bot.box.horology.pojo.Zodiac
 import com.ayg.advancevoiceassistant.databinding.ActivityAssistantBinding
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
+import com.kwabenaberko.openweathermaplib.constant.Units
+import com.kwabenaberko.openweathermaplib.implementation.OpenWeatherMapHelper
+import com.kwabenaberko.openweathermaplib.implementation.callback.CurrentWeatherCallback
+import com.kwabenaberko.openweathermaplib.model.currentweather.CurrentWeather
 import com.ml.quaterion.text2summary.Text2Summary
 import com.theartofdev.edmodo.cropper.CropImage
 import com.theartofdev.edmodo.cropper.CropImageView
@@ -101,6 +111,9 @@ class AssistantActivity : AppCompatActivity() {
 
     //Image Uri
     private lateinit var imgUri : Uri
+
+    //Weather Key
+    private lateinit var helper: OpenWeatherMapHelper
 
 
     @Suppress("DEPRECATION")
@@ -164,6 +177,7 @@ class AssistantActivity : AppCompatActivity() {
         }
         clipboardManager = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
         ringtone = RingtoneManager.getRingtone(applicationContext, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))
+        helper = OpenWeatherMapHelper(getString(R.string.OPEN_WEATHER_MAP_API_KEY))
 
 
         // setting oninit listener
@@ -223,6 +237,7 @@ class AssistantActivity : AppCompatActivity() {
                     keeper = data[0]
                     Log.d(logkeeper, keeper)
                     when {
+//                        keeper.contains("hello") || keeper.contains("hi") || keeper.contains("")
                         keeper.contains("clear everything") -> assistantViewModel.onClear()
                         keeper.contains("date") -> getDate()
                         keeper.contains("time") -> getTime()
@@ -247,6 +262,11 @@ class AssistantActivity : AppCompatActivity() {
                         keeper.contains("play ringtone") -> playRingtone()
                         keeper.contains("stop ringtone") || keeper.contains("top ringtone") -> stopRingtone()
                         keeper.contains("read me") -> readMe()
+                        keeper.contains("alarm") -> setAlarm()
+                        keeper.contains("weather") -> weather()
+                        keeper.contains("horoscope") -> horoscope()
+                        keeper.contains("medical") -> medicalApplication()
+                        else -> speak("Invalid command, try again")
                     }
 
                 }
@@ -667,10 +687,10 @@ class AssistantActivity : AppCompatActivity() {
 //                        }
                         if(keeper.contains("summarise"))
                         {
-                            speak("Reading Image and Summarising it :\n"+summariseText(resultText))
+                            speak("Reading Image and Summarising it :\n" + summariseText(resultText))
                         }
                         else {
-                            speak("Reading Image:\n"+resultText)
+                            speak("Reading Image:\n" + resultText)
 
                         }
                     }
@@ -685,6 +705,73 @@ class AssistantActivity : AppCompatActivity() {
         val summary: ObjectRef<*> = ObjectRef<Any?>()
         summary.element = Text2Summary.Companion.summarize(text, 0.4f)
         return summary.element as String
+    }
+
+    private fun setAlarm()
+    {
+
+    }
+
+    private fun medicalApplication()
+    {
+
+    }
+
+    private fun weather()
+    {
+        if(keeper.contains("Fahrenheit"))
+        {
+            helper.setUnits(Units.IMPERIAL)
+        }
+        else if(keeper.contains("Celsius"))
+        {
+            helper.setUnits(Units.METRIC)
+        }
+
+        val keeperSplit = keeper.replace(" ".toRegex(), "").split("w").toTypedArray()
+        val city = keeperSplit[0]
+        Log.d("chk", city)
+
+        helper.getCurrentWeatherByCityName(city, object : CurrentWeatherCallback {
+            override fun onSuccess(currentWeather: CurrentWeather) {
+                speak("""
+    Coordinates: ${currentWeather.coord.lat}, ${currentWeather.coord.lon}
+    Weather Description: ${currentWeather.weather[0].description}
+    Temperature: ${currentWeather.main.tempMax}
+    Wind Speed: ${currentWeather.wind.speed}
+    City, Country: ${currentWeather.name}, ${currentWeather.sys.country}
+    """.trimIndent()
+                )
+            }
+
+            override fun onFailure(throwable: Throwable) {
+                speak("Error" + throwable.message)
+            }
+        })
+    }
+
+    private fun horoscope()
+    {
+        Log.d("chk", "hello")
+        val hGemini : Horoscope? = Horoscope.Zodiac(this)
+                .requestSunSign(SUNSIGN.GEMINI)
+                .requestDuration(DURATION.TODAY)
+                .showLoader(true)
+                .isDebuggable(true)
+                .fetchHoroscope()
+        val cGemini = HorologyController(object : Response {
+            override fun onResponseObtained(zodiac: Zodiac) {
+                val horoscope: String = zodiac.getHoroscope()
+                val sunsign: String = zodiac.getSunSign()
+                val date: String = zodiac.getDate()
+                Log.d("chk", horoscope+sunsign+date)
+            }
+
+            override fun onErrorObtained(errormsg: String?) {
+                speak("Can't Reach Data")
+            }
+        })
+        cGemini.requestConstellations(hGemini)
     }
 
     override fun onRequestPermissionsResult(

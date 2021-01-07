@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="first_message">Hello, how can I help you?</string>
+    <string name="OPEN_WEATHER_MAP_API_KEY">e2f18082ff618ac5a563a175973a3360</string>
 </resources>
