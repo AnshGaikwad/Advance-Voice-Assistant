@@ -69,6 +69,12 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.7"
 
+    //ML Vision
+    implementation 'com.google.android.gms:play-services-mlkit-text-recognition:16.1.2'
+
+    implementation 'com.github.shubham0204:Text2Summary-Android:alpha-05'
+    implementation 'com.theartofdev.edmodo:android-image-cropper:2.8.0'
+
     testImplementation 'junit:junit:4.13.1'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'

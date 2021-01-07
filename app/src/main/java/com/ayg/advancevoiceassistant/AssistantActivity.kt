@@ -11,6 +11,8 @@ import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.hardware.camera2.CameraManager
 import android.media.Ringtone
 import android.media.RingtoneManager
@@ -22,7 +24,6 @@ import android.os.StrictMode
 import android.os.StrictMode.VmPolicy
 import android.provider.ContactsContract
 import android.provider.MediaStore
-import android.provider.Settings
 import android.provider.Telephony
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -44,14 +45,18 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.ayg.advancevoiceassistant.databinding.ActivityAssistantBinding
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.ml.quaterion.text2summary.Text2Summary
+import com.theartofdev.edmodo.cropper.CropImage
+import com.theartofdev.edmodo.cropper.CropImageView
 import java.io.File
+import java.io.FileNotFoundException
 import java.io.IOException
-import java.net.NetworkInterface
-import java.net.SocketException
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.experimental.and
+import kotlin.jvm.internal.Ref.ObjectRef
 
 
 class AssistantActivity : AppCompatActivity() {
@@ -93,7 +98,13 @@ class AssistantActivity : AppCompatActivity() {
 
     //Image Vars
     private var imageIndex: Int = 0
-    private val imageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + "/myCamera/"
+
+    //Image Uri
+    private lateinit var imgUri : Uri
+
+
+    @Suppress("DEPRECATION")
+    private val imageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + "/assistant/"
 
 
     @SuppressLint("ClickableViewAccessibility")
@@ -235,7 +246,7 @@ class AssistantActivity : AppCompatActivity() {
                         keeper.contains("capture photo") -> capturePhoto()
                         keeper.contains("play ringtone") -> playRingtone()
                         keeper.contains("stop ringtone") || keeper.contains("top ringtone") -> stopRingtone()
-//                        keeper.contains("timer") || keeper.contains("Timer") -> setTimer()
+                        keeper.contains("read me") -> readMe()
                     }
 
                 }
@@ -253,6 +264,7 @@ class AssistantActivity : AppCompatActivity() {
 
                 }
                 MotionEvent.ACTION_DOWN -> {
+                    textToSpeech.stop()
                     speechRecognizer.startListening(recognizerIntent)
 
                 }
@@ -619,6 +631,62 @@ class AssistantActivity : AppCompatActivity() {
         ringtone.stop()
     }
 
+    private fun readMe()
+    {
+        CropImage.startPickImageActivity(this@AssistantActivity)
+    }
+
+//    private fun getTextFromBitmap(bitmap: Bitmap) {
+//        val image : FirebaseVisionImage = FirebaseVisionImage.fromBitmap(bitmap)
+//        val textDetector : FirebaseVisionTextDetector = FirebaseVision.getInstance().visionTextDetector
+//        textDetector.detectInImage(image).addOnSuccessListener { firebaseVisionText -> displayTextFromImage(firebaseVisionText!!) }.addOnFailureListener { e -> Toast.makeText(this@AssistantActivity, "Error: " + e.message, Toast.LENGTH_SHORT).show() }
+//    }
+
+        private fun getTextFromBitmap(bitmap: Bitmap) {
+            val image = InputImage.fromBitmap(bitmap, 0)
+            val recognizer = TextRecognition.getClient()
+            val result = recognizer.process(image)
+                    .addOnSuccessListener { visionText ->
+                        // Task completed successfully
+                        // ...
+                        val resultText = visionText.text
+//                        for (block in visionText.textBlocks) {
+//                            val blockText = block.text
+//                            val blockCornerPoints = block.cornerPoints
+//                            val blockFrame = block.boundingBox
+//                            for (line in block.lines) {
+//                                val lineText = line.text
+//                                val lineCornerPoints = line.cornerPoints
+//                                val lineFrame = line.boundingBox
+//                                for (element in line.elements) {
+//                                    val elementText = element.text
+//                                    val elementCornerPoints = element.cornerPoints
+//                                    val elementFrame = element.boundingBox
+//                                }
+//                            }
+//                        }
+                        if(keeper.contains("summarise"))
+                        {
+                            speak("Reading Image and Summarising it :\n"+summariseText(resultText))
+                        }
+                        else {
+                            speak("Reading Image:\n"+resultText)
+
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        // Task failed with an exception
+                        // ...
+                        Toast.makeText(this@AssistantActivity, "Error: " + e.message, Toast.LENGTH_SHORT).show()
+                    }
+        }
+
+    private fun summariseText(text: String): String? {
+        val summary: ObjectRef<*> = ObjectRef<Any?>()
+        summary.element = Text2Summary.Companion.summarize(text, 0.4f)
+        return summary.element as String
+    }
+
     override fun onRequestPermissionsResult(
             requestCode: Int,
             permissions: Array<out String>,
@@ -715,6 +783,31 @@ class AssistantActivity : AppCompatActivity() {
                 speak("Could'nt turn on bluetooth")
             }
         }
+
+        if (requestCode == CropImage.PICK_IMAGE_CHOOSER_REQUEST_CODE && resultCode == RESULT_OK) {
+            val imageUri = CropImage.getPickImageResultUri(this, data)
+            imgUri = imageUri
+            startCrop(imageUri)
+        }
+
+        if (requestCode == CropImage.CROP_IMAGE_ACTIVITY_REQUEST_CODE) {
+            val result : CropImage.ActivityResult = CropImage.getActivityResult(data)
+            if (resultCode == RESULT_OK) {
+                imgUri = result.uri
+                try {
+                    val inputStream = contentResolver.openInputStream(imgUri)
+                    val bitmap = BitmapFactory.decodeStream(inputStream)
+                    getTextFromBitmap(bitmap)
+                } catch (e: FileNotFoundException) {
+                    e.printStackTrace()
+                }
+                Toast.makeText(this, "Image captured successfully !", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun startCrop(imageUri: Uri) {
+        CropImage.activity(imageUri).setGuidelines(CropImageView.Guidelines.ON).setMultiTouchEnabled(true).start(this@AssistantActivity)
     }
 
     private fun circularRevealActivity() {
