@@ -1,14 +1,28 @@
 package com.ayg.advancevoiceassistant
 
 import android.Manifest
+import android.Manifest.permission
 import android.animation.Animator
 import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
+import android.hardware.camera2.CameraManager
+import android.media.Ringtone
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.os.StrictMode
+import android.os.StrictMode.VmPolicy
+import android.provider.ContactsContract
+import android.provider.MediaStore
+import android.provider.Settings
 import android.provider.Telephony
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -30,22 +44,27 @@ import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.ayg.advancevoiceassistant.databinding.ActivityAssistantBinding
+import java.io.File
+import java.io.IOException
+import java.net.NetworkInterface
+import java.net.SocketException
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.experimental.and
 
 
 class AssistantActivity : AppCompatActivity() {
 
-    //data binding
+    // views
     private lateinit var binding: ActivityAssistantBinding
+    private lateinit var assistantViewModel : AssistantViewModel
 
-    // Initializations
+    // SR & TTS
     private lateinit var textToSpeech: TextToSpeech
     private lateinit var speechRecognizer: SpeechRecognizer
     private lateinit var recognizerIntent: Intent
     private lateinit var keeper : String
-    private lateinit var assistantViewModel : AssistantViewModel
 
     // log statements
     private val logtts = "TTS"
@@ -53,9 +72,29 @@ class AssistantActivity : AppCompatActivity() {
     private val logkeeper = "keeper"
 
     //permissions
-    private var REQUEST_CALL = 1
+    private var REQUESTCALL = 1
     private var SENDSMS = 2
-    private var READSMS = 2
+    private var READSMS = 3
+    private var SHAREAFILE = 4
+    private var SHAREATEXTFILE = 5
+    private var READCONTACTS = 6
+    private var CAPTUREPHOTO = 7
+
+    //request codes
+    private val REQUEST_CODE_SELECT_DOC: Int = 100
+    private val REQUEST_ENABLE_BT = 1000
+
+    // Managers
+    private var bluetoothAdapter: BluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+    private lateinit var cameraManager : CameraManager
+    private lateinit var clipboardManager : ClipboardManager
+    private lateinit var cameraID : String
+    private lateinit var ringtone : Ringtone
+
+    //Image Vars
+    private var imageIndex: Int = 0
+    private val imageDirectory = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES).toString() + "/myCamera/"
+
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -69,9 +108,10 @@ class AssistantActivity : AppCompatActivity() {
         val dataSource = AssistantDatabase.getInstance(application).assistantDao
         val viewModelFactory = AssistantViewModelFactory(dataSource, application)
 
+
         assistantViewModel =
             ViewModelProvider(
-                this, viewModelFactory
+                    this, viewModelFactory
             ).get(AssistantViewModel::class.java)
 
         binding.assistantViewModel = assistantViewModel
@@ -96,13 +136,24 @@ class AssistantActivity : AppCompatActivity() {
                     override fun onGlobalLayout() {
                         circularRevealActivity()
                         binding.assistantConstraintLayout.getViewTreeObserver()
-                            .removeOnGlobalLayoutListener(
-                                this
-                            )
+                                .removeOnGlobalLayoutListener(
+                                        this
+                                )
                     }
                 })
             }
         }
+
+    // init managers
+        cameraManager = getSystemService(CAMERA_SERVICE) as CameraManager
+        try {
+            cameraID = cameraManager.cameraIdList[0] // 0 is for back camera and 1 is for front camera
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
+        clipboardManager = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        ringtone = RingtoneManager.getRingtone(applicationContext, RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE))
+
 
         // setting oninit listener
         textToSpeech = TextToSpeech(this) { status ->
@@ -134,8 +185,8 @@ class AssistantActivity : AppCompatActivity() {
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
         recognizerIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         recognizerIntent.putExtra(
-            RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-            RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
         )
         recognizerIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
 
@@ -171,26 +222,19 @@ class AssistantActivity : AppCompatActivity() {
                         keeper.contains("open WhatsApp") -> openWhatsapp()
                         keeper.contains("open Facebook") -> openFacebook()
                         keeper.contains("open messages") -> openMessages()
-//                        keeper.contains("share a file") -> shareAFile()
-//                        keeper.contains("share a text message") -> shareATextMessage()
-//                        keeper.contains("Share text message") -> shareATextMessage()
-//                        keeper.contains("flip a coin") -> flipCoin()
-//                        keeper.contains("roll dice") -> rollDice()
-//                        keeper.contains("call") -> callContact()
-//                        keeper.contains("turn on Bluetooth") -> turnOnBluetooth()
-//                        keeper.contains("turn off Bluetooth") -> turnOffBluetooth()
-//                        keeper.contains("make phone discoverable for bluetooth") -> discoverableBluetooth()
-//                        keeper.contains("get all paired devices") -> getAllPairedDevices()
-//                        keeper.contains("turn on flashlight") -> turnOnFlash()
-//                        keeper.contains("turn off flashlight") -> turnOffFlash()
-//                        keeper.contains("copy to clipboard") -> clipBoardCopy()
-//                        keeper.contains("read last clipboard") -> clipBoardSpeak()
-//                        keeper.contains("capture photo") -> capturePhoto()
-//                        keeper.contains("get MAC address") -> getMac()
-//                        keeper.contains("Eco start") -> echo()
-//                        keeper.contains("brightness") -> setBrightness()
-//                        keeper.contains("play ringtone") -> playRingtone()
-//                        keeper.contains("stop ringtone") -> stopRingtone()
+                        keeper.contains("share a file") -> shareAFile() // needs some work
+                        keeper.contains("share a text message") -> shareATextMessage()
+                        keeper.contains("call") -> callContact()
+                        keeper.contains("turn on Bluetooth") -> turnOnBluetooth()
+                        keeper.contains("turn off Bluetooth") -> turnOffBluetooth()
+                        keeper.contains("get bluetooth devices") -> getAllPairedDevices()
+                        keeper.contains("turn on flash") -> turnOnFlash()
+                        keeper.contains("turn off flash") -> turnOffFlash()
+                        keeper.contains("copy to clipboard") -> clipBoardCopy()
+                        keeper.contains("read last clipboard") -> clipBoardSpeak()
+                        keeper.contains("capture photo") -> capturePhoto()
+                        keeper.contains("play ringtone") -> playRingtone()
+                        keeper.contains("stop ringtone") || keeper.contains("top ringtone") -> stopRingtone()
 //                        keeper.contains("timer") || keeper.contains("Timer") -> setTimer()
                     }
 
@@ -267,14 +311,14 @@ class AssistantActivity : AppCompatActivity() {
 
             // runtime message
             if (ContextCompat.checkSelfPermission(
-                    this@AssistantActivity,
-                    Manifest.permission.CALL_PHONE
-                ) != PackageManager.PERMISSION_GRANTED
+                            this@AssistantActivity,
+                            Manifest.permission.CALL_PHONE
+                    ) != PackageManager.PERMISSION_GRANTED
             ) {
                 ActivityCompat.requestPermissions(
-                    this@AssistantActivity,
-                    arrayOf(Manifest.permission.CALL_PHONE),
-                    REQUEST_CALL
+                        this@AssistantActivity,
+                        arrayOf(Manifest.permission.CALL_PHONE),
+                        REQUESTCALL
                 )
             } else {
                 // passing intent
@@ -295,14 +339,14 @@ class AssistantActivity : AppCompatActivity() {
         Log.d("keeper", "Done0")
         // runtime message
         if (ContextCompat.checkSelfPermission(
-                this@AssistantActivity,
-                Manifest.permission.SEND_SMS
-            ) != PackageManager.PERMISSION_GRANTED
+                        this@AssistantActivity,
+                        Manifest.permission.SEND_SMS
+                ) != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
-                this@AssistantActivity,
-                arrayOf(Manifest.permission.SEND_SMS),
-                SENDSMS
+                    this@AssistantActivity,
+                    arrayOf(Manifest.permission.SEND_SMS),
+                    SENDSMS
             )
             Log.d("keeper", "Done1")
         }else{
@@ -313,11 +357,11 @@ class AssistantActivity : AppCompatActivity() {
             Log.d("chk", number + message)
             val mySmsManager = SmsManager.getDefault()
             mySmsManager.sendTextMessage(
-                number.trim { it <= ' ' },
-                null,
-                message.trim { it <= ' ' },
-                null,
-                null
+                    number.trim { it <= ' ' },
+                    null,
+                    message.trim { it <= ' ' },
+                    null,
+                    null
             )
             speak("Message sent that $message")
         }
@@ -326,14 +370,14 @@ class AssistantActivity : AppCompatActivity() {
     //  read my last SMS
     private fun readSMS() {
         if (ContextCompat.checkSelfPermission(
-                this@AssistantActivity,
-                Manifest.permission.READ_SMS
-            ) != PackageManager.PERMISSION_GRANTED
+                        this@AssistantActivity,
+                        Manifest.permission.READ_SMS
+                ) != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
-                this@AssistantActivity,
-                arrayOf(Manifest.permission.READ_SMS),
-                READSMS
+                    this@AssistantActivity,
+                    arrayOf(Manifest.permission.READ_SMS),
+                    READSMS
             )
         }
         else {
@@ -364,14 +408,225 @@ class AssistantActivity : AppCompatActivity() {
         intent?.let { startActivity(it) }
     }
 
+    private fun shareAFile() {
+        if (ContextCompat.checkSelfPermission(
+                        this@AssistantActivity,
+                        Manifest.permission.READ_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                    this@AssistantActivity,
+                    arrayOf(permission.READ_EXTERNAL_STORAGE, permission.WRITE_EXTERNAL_STORAGE),
+                    SHAREAFILE
+            )
+        }
+        else{
+            val builder = VmPolicy.Builder()
+            StrictMode.setVmPolicy(builder.build())
+            val myFileIntent = Intent(Intent.ACTION_GET_CONTENT)
+            myFileIntent.type = "application/pdf"
+            startActivityForResult(myFileIntent, REQUEST_CODE_SELECT_DOC)
+        }
+    }
+
+    private fun shareATextMessage() {
+        if (ContextCompat.checkSelfPermission(
+                        this@AssistantActivity,
+                        Manifest.permission.READ_EXTERNAL_STORAGE
+                ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                    this@AssistantActivity,
+                    arrayOf(permission.READ_EXTERNAL_STORAGE, permission.WRITE_EXTERNAL_STORAGE),
+                    SHAREATEXTFILE
+            )
+        }
+        else{
+            val builder = VmPolicy.Builder()
+            StrictMode.setVmPolicy(builder.build())
+            val message = keeper.split("that").toTypedArray()[1]
+            //        String subject = keeper.split("with")[1];
+            val intentShare = Intent(Intent.ACTION_SEND)
+            intentShare.type = "text/plain"
+            //        intentShare.putExtra(Intent.EXTRA_SUBJECT,subject);
+            intentShare.putExtra(Intent.EXTRA_TEXT, message)
+            startActivity(Intent.createChooser(intentShare, "Sharing Text"))
+        }
+    }
+
+    private fun callContact() {
+        if (ContextCompat.checkSelfPermission(
+                        this@AssistantActivity,
+                        Manifest.permission.READ_CONTACTS
+                ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                    this@AssistantActivity,
+                    arrayOf(permission.READ_CONTACTS, permission.WRITE_CONTACTS),
+                    READCONTACTS
+            )
+        }
+        else
+        {
+            val name = keeper.split("call").toTypedArray()[1].trim { it <= ' ' }
+            Log.d("chk", name)
+            try {
+                val cursor = contentResolver.query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI, arrayOf(ContactsContract.CommonDataKinds.Phone.NUMBER, ContactsContract.CommonDataKinds.Phone.TYPE),
+                        "DISPLAY_NAME = '$name'", null, null)
+                cursor!!.moveToFirst()
+                val number = cursor.getString(0)
+                // number must not have any spaces
+                if (number.trim { it <= ' ' }.length > 0) {
+
+                    // runtime message
+                    if (ContextCompat.checkSelfPermission(this@AssistantActivity,
+                                    permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions(this@AssistantActivity, arrayOf(permission.CALL_PHONE), REQUESTCALL)
+                    } else {
+                        // passing intent
+                        val dial = "tel:$number"
+                        startActivity(Intent(Intent.ACTION_CALL, Uri.parse(dial)))
+                    }
+                } else {
+                    // invalid phone
+                    Toast.makeText(this@AssistantActivity, "Enter Phone Number", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                speak("Something went wrong")
+            }
+        }
+    }
+
+    private fun turnOnBluetooth() {
+        if (!bluetoothAdapter.isEnabled()) {
+            speak("Turning On Bluetooth...")
+            //intent to on bluetooth
+            val intent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            startActivityForResult(intent, REQUEST_ENABLE_BT)
+        } else {
+            speak("Bluetooth is already on")
+        }
+    }
+
+    private fun turnOffBluetooth() {
+        if (bluetoothAdapter.isEnabled()) {
+            bluetoothAdapter.disable()
+            speak("Turning Bluetooth Off")
+        } else {
+            speak("Bluetooth is already off")
+        }
+    }
+
+    private fun getAllPairedDevices() {
+        if (bluetoothAdapter.isEnabled()) {
+            speak("Paired Devices are ")
+            var text = ""
+            var count = 1
+            val devices: Set<BluetoothDevice> = bluetoothAdapter.getBondedDevices()
+            for (device in devices) {
+                text += "\nDevice: $count ${device.name}, $device"
+                count += 1
+            }
+            speak(text)
+        } else {
+            //bluetooth is off so can't get paired devices
+            speak("Turn on bluetooth to get paired devices")
+        }
+    }
+
+    private fun turnOnFlash() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                cameraManager.setTorchMode(cameraID, true)
+                speak("Flash turned on")
+            }
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+            speak("Error Occured")
+        }
+    }
+
+    private fun turnOffFlash() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                cameraManager.setTorchMode(cameraID, false)
+                speak("Flash turned off")
+            }
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun clipBoardCopy() {
+        val data = keeper.split("that").toTypedArray()[1].trim { it <= ' ' }
+        if (!data.isEmpty()) {
+            val clipData = ClipData.newPlainText("text", data)
+            clipboardManager.setPrimaryClip(clipData)
+            speak("Data copied to clipboard that is $data")
+        }
+    }
+
+    fun clipBoardSpeak() {
+        val item = clipboardManager.primaryClip!!.getItemAt(0)
+        val pasteData = item.text.toString()
+        if (pasteData != "") {
+            speak("Data stored in last clipboard is " + pasteData)
+        } else {
+            speak("Clipboard is Empty")
+        }
+    }
+
+    private fun capturePhoto() {
+        if (ContextCompat.checkSelfPermission(
+                        this@AssistantActivity,
+                        Manifest.permission.CAMERA
+                ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                    this@AssistantActivity,
+                    arrayOf(permission.CAMERA, permission.WRITE_EXTERNAL_STORAGE),
+                    CAPTUREPHOTO
+            )
+        }
+        else
+        {
+            val builder = VmPolicy.Builder()
+            StrictMode.setVmPolicy(builder.build())
+            imageIndex++
+            val file: String = imageDirectory + imageIndex + ".jpg"
+            val newFile = File(file)
+            try {
+                newFile.createNewFile()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+            val outputFileUri = Uri.fromFile(newFile)
+            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+            cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri)
+            startActivity(cameraIntent)
+            speak("Photo  will be saved to $file")
+        }
+    }
+
+    private fun playRingtone() {
+        speak("Ringtone playing")
+        ringtone.play()
+    }
+
+    private fun stopRingtone() {
+        speak("Ringtone stopped")
+        ringtone.stop()
+    }
+
     override fun onRequestPermissionsResult(
-        requestCode: Int,
-        permissions: Array<out String>,
-        grantResults: IntArray
+            requestCode: Int,
+            permissions: Array<out String>,
+            grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        if (requestCode == REQUEST_CALL) {
+        if (requestCode == REQUESTCALL) {
             if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // when permission granted
                 makeAPhoneCall()
@@ -400,20 +655,80 @@ class AssistantActivity : AppCompatActivity() {
                 Toast.makeText(this, "Permission DENIED", Toast.LENGTH_SHORT).show()
             }
         }
+        else if(requestCode == SHAREAFILE)
+        {
+            if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // when permission granted
+                shareAFile()
+            } else {
+                // permission denied
+                Toast.makeText(this, "Permission DENIED", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else if(requestCode == SHAREATEXTFILE)
+        {
+            if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // when permission granted
+                shareATextMessage()
+            } else {
+                // permission denied
+                Toast.makeText(this, "Permission DENIED", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else if(requestCode == READCONTACTS)
+        {
+            if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // when permission granted
+                callContact()
+            } else {
+                // permission denied
+                Toast.makeText(this, "Permission DENIED", Toast.LENGTH_SHORT).show()
+            }
+        }
+        else if(requestCode == CAPTUREPHOTO)
+        {
+            if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // when permission granted
+                capturePhoto()
+            } else {
+                // permission denied
+                Toast.makeText(this, "Permission DENIED", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_CODE_SELECT_DOC && resultCode == RESULT_OK) {
+            val filePath = data!!.data!!.path
+            Log.d("chk", "path: $filePath")
+            val file= File(filePath)
+            val intentShare = Intent(Intent.ACTION_SEND)
+            intentShare.type = "application/pdf"
+            intentShare.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://$file"))
+            startActivity(Intent.createChooser(intentShare, "Share the file ..."))
+        }
+        if (requestCode == REQUEST_ENABLE_BT) {
+            if (resultCode == RESULT_OK) {
+                speak("Bluetooth is on")
+            } else {
+                speak("Could'nt turn on bluetooth")
+            }
+        }
     }
 
     private fun circularRevealActivity() {
         val cx: Int = binding.assistantConstraintLayout.getRight() - getDips(44)
         val cy: Int = binding.assistantConstraintLayout.getBottom() - getDips(44)
         val finalRadius: Int = Math.max(
-            binding.assistantConstraintLayout.getWidth(),
-            binding.assistantConstraintLayout.getHeight()
+                binding.assistantConstraintLayout.getWidth(),
+                binding.assistantConstraintLayout.getHeight()
         )
         val circularReveal = ViewAnimationUtils.createCircularReveal(
-            binding.assistantConstraintLayout,
-            cx,
-            cy, 0f,
-            finalRadius.toFloat()
+                binding.assistantConstraintLayout,
+                cx,
+                cy, 0f,
+                finalRadius.toFloat()
         )
         circularReveal.duration = 1250
         binding.assistantConstraintLayout.setVisibility(View.VISIBLE)
@@ -423,9 +738,9 @@ class AssistantActivity : AppCompatActivity() {
     private fun getDips(dps: Int): Int {
         val resources: Resources = resources
         return TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP,
-            dps.toFloat(),
-            resources.getDisplayMetrics()
+                TypedValue.COMPLEX_UNIT_DIP,
+                dps.toFloat(),
+                resources.getDisplayMetrics()
         ).toInt()
     }
 
@@ -434,13 +749,13 @@ class AssistantActivity : AppCompatActivity() {
             val cx: Int = binding.assistantConstraintLayout.getWidth() - getDips(44)
             val cy: Int = binding.assistantConstraintLayout.getBottom() - getDips(44)
             val finalRadius: Int = Math.max(
-                binding.assistantConstraintLayout.getWidth(),
-                binding.assistantConstraintLayout.getHeight()
+                    binding.assistantConstraintLayout.getWidth(),
+                    binding.assistantConstraintLayout.getHeight()
             )
             val circularReveal =
                 ViewAnimationUtils.createCircularReveal(
-                    binding.assistantConstraintLayout, cx, cy,
-                    finalRadius.toFloat(), 0f
+                        binding.assistantConstraintLayout, cx, cy,
+                        finalRadius.toFloat(), 0f
                 )
             circularReveal.addListener(object : Animator.AnimatorListener {
                 override fun onAnimationStart(animator: Animator) {}
