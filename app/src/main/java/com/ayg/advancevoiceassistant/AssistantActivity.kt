@@ -237,7 +237,9 @@ class AssistantActivity : AppCompatActivity() {
                     keeper = data[0]
                     Log.d(logkeeper, keeper)
                     when {
-//                        keeper.contains("hello") || keeper.contains("hi") || keeper.contains("")
+                        keeper.contains("hello") || keeper.contains("hi") || keeper.contains("hey") -> speak("Hello, how can I  help you")
+                        keeper.contains("thank") -> speak("It's my job, let me know if there is something else")
+                        keeper.contains("welcome") -> speak("what did you do?")
                         keeper.contains("clear everything") -> assistantViewModel.onClear()
                         keeper.contains("date") -> getDate()
                         keeper.contains("time") -> getTime()
@@ -266,6 +268,8 @@ class AssistantActivity : AppCompatActivity() {
                         keeper.contains("weather") -> weather()
                         keeper.contains("horoscope") -> horoscope()
                         keeper.contains("medical") -> medicalApplication()
+                        keeper.contains("joke") -> joke()
+                        keeper.contains("question") -> question()
                         else -> speak("Invalid command, try again")
                     }
 
@@ -773,6 +777,17 @@ class AssistantActivity : AppCompatActivity() {
         })
         cGemini.requestConstellations(hGemini)
     }
+
+    private fun joke()
+    {
+
+    }
+
+    private fun question()
+    {
+
+    }
+
 
     override fun onRequestPermissionsResult(
             requestCode: Int,
