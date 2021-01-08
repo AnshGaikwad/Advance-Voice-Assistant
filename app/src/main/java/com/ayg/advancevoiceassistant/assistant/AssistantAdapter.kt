@@ -1,4 +1,4 @@
-package com.ayg.advancevoiceassistant
+package com.ayg.advancevoiceassistant.assistant
 
 import android.view.LayoutInflater
 import android.view.View
@@ -6,6 +6,8 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.recyclerview.widget.RecyclerView
+import com.ayg.advancevoiceassistant.data.Assistant
+import com.ayg.advancevoiceassistant.R
 
 class AssistantAdapter : RecyclerView.Adapter<AssistantAdapter.ViewHolder>(){
 

@@ -1,4 +1,4 @@
-package com.ayg.advancevoiceassistant
+package com.ayg.advancevoiceassistant.data
 
 import android.content.Context
 import androidx.room.Database

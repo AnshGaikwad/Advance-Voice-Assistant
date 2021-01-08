@@ -1,4 +1,4 @@
-package com.ayg.advancevoiceassistant
+package com.ayg.advancevoiceassistant.data
 
 import androidx.room.ColumnInfo
 import androidx.room.Entity

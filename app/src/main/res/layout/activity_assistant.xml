@@ -7,7 +7,7 @@
     <data>
         <variable
             name="assistantViewModel"
-            type="com.ayg.advancevoiceassistant.AssistantViewModel" />
+            type="com.ayg.advancevoiceassistant.assistant.AssistantViewModel" />
     </data>
 
 
@@ -15,7 +15,7 @@
         android:id="@+id/assistant_constraint_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/teal_200"
+        android:background="?attr/colorOnPrimary"
         tools:context=".MainActivity">
 
         <androidx.recyclerview.widget.RecyclerView

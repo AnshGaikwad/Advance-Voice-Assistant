@@ -1,8 +1,9 @@
-package com.ayg.advancevoiceassistant
+package com.ayg.advancevoiceassistant.assistant
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.ayg.advancevoiceassistant.data.AssistantDao
 import java.lang.IllegalArgumentException
 
 class AssistantViewModelFactory (

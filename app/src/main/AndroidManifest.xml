@@ -40,7 +40,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AdvanceVoiceAssistant"
         tools:replace="android:theme">
-        <activity android:name=".AssistantActivity"/>
+        <activity android:name=".assistant.AssistantActivity"/>
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

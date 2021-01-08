@@ -1,4 +1,4 @@
-package com.ayg.advancevoiceassistant
+package com.ayg.advancevoiceassistant.assistant
 
 import android.Manifest
 import android.Manifest.permission
@@ -50,6 +50,8 @@ import bot.box.horology.api.Horoscope
 import bot.box.horology.delegate.Response
 import bot.box.horology.hanshake.HorologyController
 import bot.box.horology.pojo.Zodiac
+import com.ayg.advancevoiceassistant.data.AssistantDatabase
+import com.ayg.advancevoiceassistant.R
 import com.ayg.advancevoiceassistant.databinding.ActivityAssistantBinding
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -237,10 +239,9 @@ class AssistantActivity : AppCompatActivity() {
                     keeper = data[0]
                     Log.d(logkeeper, keeper)
                     when {
-                        keeper.contains("hello") || keeper.contains("hi") || keeper.contains("hey") -> speak("Hello, how can I  help you")
                         keeper.contains("thank") -> speak("It's my job, let me know if there is something else")
-                        keeper.contains("welcome") -> speak("what did you do?")
-                        keeper.contains("clear everything") -> assistantViewModel.onClear()
+                        keeper.contains("welcome") -> speak("for what?")
+                        keeper.contains("clear") -> assistantViewModel.onClear()
                         keeper.contains("date") -> getDate()
                         keeper.contains("time") -> getTime()
                         keeper.contains("phone call") -> makeAPhoneCall()
@@ -270,6 +271,7 @@ class AssistantActivity : AppCompatActivity() {
                         keeper.contains("medical") -> medicalApplication()
                         keeper.contains("joke") -> joke()
                         keeper.contains("question") -> question()
+                        keeper.contains("hello") || keeper.contains(" hi ") || keeper.contains("hey") -> speak("Hello, how can I  help you?")
                         else -> speak("Invalid command, try again")
                     }
 
@@ -734,7 +736,7 @@ class AssistantActivity : AppCompatActivity() {
 
         val keeperSplit = keeper.replace(" ".toRegex(), "").split("w").toTypedArray()
         val city = keeperSplit[0]
-        Log.d("chk", city)
+        Log.d("chk","the city is" + keeperSplit)
 
         helper.getCurrentWeatherByCityName(city, object : CurrentWeatherCallback {
             override fun onSuccess(currentWeather: CurrentWeather) {

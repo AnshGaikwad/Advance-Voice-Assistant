@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.ayg.advancevoiceassistant.assistant.AssistantActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.util.*
 

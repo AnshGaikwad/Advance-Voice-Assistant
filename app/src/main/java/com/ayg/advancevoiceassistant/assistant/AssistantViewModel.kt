@@ -1,10 +1,10 @@
-package com.ayg.advancevoiceassistant
+package com.ayg.advancevoiceassistant.assistant
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Transformations
-import com.ayg.advancevoiceassistant.AssistantActivity
+import com.ayg.advancevoiceassistant.data.Assistant
+import com.ayg.advancevoiceassistant.data.AssistantDao
 import kotlinx.coroutines.*
 
 class AssistantViewModel (
